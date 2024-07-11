@@ -452,8 +452,8 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
     annotations = []
     shapes = []
 
-    x_start = 0.8
-    y_start = 0.3
+    x_start = 0.80
+    y_start = 0.325
     y_step = 0.05
 
     for i, (candidate, votes) in enumerate(electoral_dict.items()):
@@ -462,9 +462,9 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
 
         shapes.append(go.layout.Shape(type='rect',
                                       x0=x_start + 0.01,
-                                      y0=y_start - ((i) * y_step) + 0.03,
+                                      y0=y_start - ((i) * y_step) + 0.0225,
                                       x1=x_start + 0.02,
-                                      y1=y_start - ((i) * y_step) + 0.005,
+                                      y1=y_start - ((i) * y_step) + 0.0025,
                                       xanchor='top',
                                       yanchor='left',
                                       xref='paper',
@@ -480,7 +480,7 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
                                     yref='paper',
                                     text=f"<b>{candidate} ({candidate_party})</b>  - {votes} EVs",
                                     showarrow=False,
-                                    font={'size':13}))
+                                    font={'size':12, 'color':'white'}))
             
         elif st.session_state.map_type == 'National':
             annotations.append(dict(x=x_start + 0.025,
@@ -490,10 +490,10 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
                                     yref='paper',
                                     text=f"<b>{candidate} ({candidate_party})</b>  - {percentage}%",
                                     showarrow=False,
-                                    font={'size':13}))
+                                    font={'size':12, 'color':'white'}))
 
     fig = px.choropleth(map_data_state,
-                        title=f"{title_str.title()}  -  {st.session_state.map_type}",
+                        title=f"<b>{title_str.title()}  -  {st.session_state.map_type}</b>",
                         locations='States',
                         locationmode='USA-states',
                         color='Winner',
@@ -550,15 +550,17 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
                       plot_bgcolor='rgba(0,0,0,0)',
                       paper_bgcolor='rgba(0,0,0,0)',
                       margin=dict(l=0, r=0, t=0, b=0),
-                      width=1280,
-                      height=720,
-                      title={'font':{'size':20}, 'x':0.5, 'y':0.975, 'xanchor': 'center'},
+                      width=1600,
+                      height=800,
+                      title={'font':{'size':20, 'color':'white'}, 'x':0.5, 'y':0.975, 'xanchor': 'center'},
                       legend={'y': 0.75, 'yanchor': 'middle'},
                       showlegend=False,
                       annotations=annotations,
                       shapes=shapes)
     
     st.session_state.figure = fig
+    img_bytes = fig.to_image(format='png')
+    st.session_state.figure_img = img_bytes
 
     return
 
@@ -597,6 +599,8 @@ if 'update_button_disabled' not in st.session_state:
     st.session_state['update_button_disabled'] = False
 if 'figure' not in st.session_state:
     st.session_state['figure'] = None
+if 'figure_img' not in st.session_state:
+    st.session_state['figure_img'] = None
 if 'button_text' not in st.session_state:
     st.session_state['button_text'] = "Generate Map"
 if 'run_initial' not in st.session_state:
@@ -629,8 +633,8 @@ with col2:
               use_container_width=True,
               on_click=set_maptype_state)
 
-if st.session_state.figure:
-    st.plotly_chart(st.session_state.figure, use_container_width=True)
+if st.session_state.figure_img:
+    st.image(st.session_state.figure_img)
     
 # Sidebar options
 
