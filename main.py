@@ -565,9 +565,18 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
 
 @st.cache_data
 def initial_data_load():
+    global full_candidate_list
+
     preliminary_data = dataCollection.acquire_latest_data()
     preliminary_candidates = dataCollection.extract_candidate_groups(preliminary_data)
     preliminary_pollsters = sorted(set(preliminary_data['pollster']))
+
+    all_candidates = sorted(set(preliminary_data['candidate_name']))
+    full_candidate_list = {}
+    
+    for ind_candidate in all_candidates:
+        cand_party = preliminary_data.loc[preliminary_data['candidate_name'] == ind_candidate, "party"].values[0]
+        full_candidate_list[ind_candidate] = cand_party
 
     return preliminary_data, preliminary_candidates, preliminary_pollsters
 
