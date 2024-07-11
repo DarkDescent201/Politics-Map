@@ -559,8 +559,6 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
                       shapes=shapes)
     
     st.session_state.figure = fig
-    img_bytes = fig.to_image(format='png')
-    st.session_state.figure_img = img_bytes
 
     return
 
@@ -599,8 +597,6 @@ if 'update_button_disabled' not in st.session_state:
     st.session_state['update_button_disabled'] = False
 if 'figure' not in st.session_state:
     st.session_state['figure'] = None
-if 'figure_img' not in st.session_state:
-    st.session_state['figure_img'] = None
 if 'button_text' not in st.session_state:
     st.session_state['button_text'] = "Generate Map"
 if 'run_initial' not in st.session_state:
@@ -633,8 +629,8 @@ with col2:
               use_container_width=True,
               on_click=set_maptype_state)
 
-if st.session_state.figure_img:
-    st.image(st.session_state.figure_img)
+if st.session_state.figure:
+    st.plotly_chart(st.session_state.figure)
     
 # Sidebar options
 
