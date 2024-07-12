@@ -527,9 +527,9 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
         color_rgba = mcolors.to_rgba(color)
         r, g, b = color_rgba[0:3]
 
-        lowcolor = f"rgba({r}, {g}, {b}, {opacity_min})"
+        lowcolor = f"rgba({r}, {g}, {b}, {opacity_max})"
         midcolor = f"rgba({r}, {g}, {b}, {opacity_med})"
-        hicolor = f"rgba({r}, {g}, {b}, {opacity_max})"
+        hicolor = f"rgba({r}, {g}, {b}, {opacity_min})"
 
         if st.session_state.map_type == 'By State':
             colorscale = [[0.0, hicolor], [1.0, lowcolor]]
