@@ -431,7 +431,7 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
             if 'National' in poll_scores.columns:
                 hover_text = f"<b>National</b><br><br>"
                 hover_text += f"{poll_scores['National'].idxmax()} is currently leading nationally<br><br>"
-                state_electors = electoral_votes['Total'].max()
+                state_electors = electoral_votes['Total'].sum()
                 for candidate in candidates:
                     hover_text += f"     {candidate}  -  {poll_scores['National'][candidate]}%<br>"
                 hover_text += f"<br>This survey covers {state_electors} electors"
