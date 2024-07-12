@@ -532,7 +532,7 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
         hicolor = f"rgba({r}, {g}, {b}, {opacity_max})"
 
         if st.session_state.map_type == 'By State':
-            colorscale = [[0.0, lowcolor], [1.0, hicolor]]
+            colorscale = [[0.0, hicolor], [1.0, lowcolor]]
         elif st.session_state.map_type == 'National':
             colorscale = [[0.0, midcolor], [1.0, midcolor]]
 
@@ -612,7 +612,7 @@ if 'button_text' not in st.session_state:
 if 'run_initial' not in st.session_state:
     st.session_state['run_initial'] = True
 if 'opacity_min' not in st.session_state:
-    st.session_state['opacity_min'] = 50
+    st.session_state['opacity_min'] = 30
 if 'opacity_med' not in st.session_state:
     st.session_state['opacity_med'] = 90
 if 'opacity_max' not in st.session_state:
