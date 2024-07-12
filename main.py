@@ -550,7 +550,7 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
                       plot_bgcolor='rgba(0,0,0,0)',
                       paper_bgcolor='rgba(0,0,0,0)',
                       margin=dict(l=0, r=0, t=0, b=0),
-                      width=1600,
+                      width=2000,
                       height=700,
                       title={'font':{'size':20, 'color':'white'}, 'x':0.5, 'y':0.975, 'xanchor': 'center'},
                       legend={'y': 0.75, 'yanchor': 'middle'},
