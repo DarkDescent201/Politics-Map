@@ -96,9 +96,12 @@ map_type = "By State"
 #### Define Functions ####
 def update_opacity_slider():
     # Get values from widget
-    widget_vals = st.session_state['opacity_slider']
+    '''widget_vals = st.session_state['opacity_slider']
     widget_min = int(widget_vals[0])
-    widget_max = int(widget_vals[1])
+    widget_max = int(widget_vals[1])'''
+    widget_val = st.session_state['opacity_slider']
+    widget_min = st.session_state.opacity_min
+    widget_max = widget_val
 
     # Calculate middle value
     widget_med = (2*widget_max + widget_min) / 3
@@ -506,7 +509,6 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
     
     z_list = []
     for trace in fig.data:
-        print('\n', trace, '\n')
         # Get or set initial variables
         cand_name = trace.name
         cand_state_list = list(trace.hovertext)
@@ -548,12 +550,15 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
         #trace.zmid = 50
         trace.colorscale = colorscale
 
-    z_list.sort()
-    z_min = z_list[0]
-    z_max= z_list[-1]
-    fig.update_traces(hovertemplate="%{customdata}",
-                      zmin=z_min,
-                      zmax=z_max)        
+    if z_list:
+        z_list.sort()
+        z_min = z_list[0]
+        z_max= z_list[-1]
+        fig.update_traces(hovertemplate="%{customdata}",
+                        zmin=z_min,
+                        zmax=z_max)
+    else:
+        fig.update_traces(hovertemplate="%{customdata}")
     
     fig.update_geos(visible=False, 
                     resolution=50,
@@ -705,7 +710,7 @@ st.sidebar.header("")
 st.sidebar.slider("Opacity Setting",
                   min_value=5,
                   max_value=100,
-                  value=(st.session_state.opacity_min, st.session_state.opacity_max),
+                  value=(st.session_state.opacity_max),
                   step=1,
                   key="opacity_slider",
                   on_change=update_opacity_slider,
