@@ -504,9 +504,9 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
                         labels={'Winner':'Leading Candidate'},
                         scope='usa')
     
-    fig.update_traces(hovertemplate="%{customdata}")
-    
+    z_list = []
     for trace in fig.data:
+        print('\n', trace, '\n')
         # Get or set initial variables
         cand_name = trace.name
         cand_state_list = list(trace.hovertext)
@@ -516,6 +516,7 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
         # Get candidate-specific scores
         for cand_state in cand_state_list:
             cand_score_list.append(poll_scores[cand_state][cand_name])
+            z_list.append(poll_scores[cand_state][cand_name])
 
         # Get opacity settings
         opacity_min = round(st.session_state.opacity_min/100, 1)
@@ -527,18 +528,32 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
         color_rgba = mcolors.to_rgba(color)
         r, g, b = color_rgba[0:3]
 
-        lowcolor = f"rgba({r}, {g}, {b}, {opacity_min})"
-        midcolor = f"rgba({r}, {g}, {b}, {opacity_med})"
-        hicolor = f"rgba({r}, {g}, {b}, {opacity_max})"
+        # Make dark and light colors (alternative approach)
+        dark_r, dark_g, dark_b = 255*max(r-0.5, 0), 255*max(g-0.5, 0), 255*max(b-0.5, 0)
+        light_r, light_g, light_b = 255*min(r+0.85, 1), 255*min(g+0.85, 1), 255*min(b+0.85, 1)
+
+        lowcolor = f"rgba({dark_r}, {dark_g}, {dark_b}, {opacity_max})"
+        midcolor = f"rgba({r}, {g}, {b}, {opacity_max})"
+        hicolor = f"rgba({light_r}, {light_g}, {light_b}, {opacity_max})"
 
         if st.session_state.map_type == 'By State':
-            colorscale = [[0.0, hicolor], [1.0, lowcolor]]
+            colorscale = [[0.0, hicolor], [0.5, midcolor], [1.0, lowcolor]]
         elif st.session_state.map_type == 'National':
             colorscale = [[0.0, midcolor], [1.0, midcolor]]
 
         # Set new parameters for the trace
         trace.z = cand_score_list if cand_score_list else trace.z
-        trace.colorscale = colorscale        
+        #trace.zmin = 40
+        #trace.zmax = 100
+        #trace.zmid = 50
+        trace.colorscale = colorscale
+
+    z_list.sort()
+    z_min = z_list[0]
+    z_max= z_list[-1]
+    fig.update_traces(hovertemplate="%{customdata}",
+                      zmin=z_min,
+                      zmax=z_max)        
     
     fig.update_geos(visible=False, 
                     resolution=50,
