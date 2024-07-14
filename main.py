@@ -435,7 +435,7 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
             if state in poll_scores.columns:
                 hover_text = f"<b>{state}</b><br><br>"
                 hover_text += f"{poll_scores[state].idxmax()} is currently leading in {state}<br>"
-                hover_text += f"by a margin of {margin_list[-1 if st.session_state.color_state=="Widest Margin" else 1]}%<br><br>"
+                hover_text += f"by a margin of {margin_list[-1 if st.session_state.color_state=='Widest Margin' else 1]}%<br><br>"
                 state_electors = electoral_votes[state].max()
                 for candidate in candidates:
                     hover_text += f"     {candidate}  -  {score[candidate]}%<br>"
@@ -446,7 +446,7 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
             if 'National' in poll_scores.columns:
                 hover_text = f"<b>National</b><br><br>"
                 hover_text += f"{poll_scores['National'].idxmax()} is currently leading nationally<br>"
-                hover_text += f"by a margin of {margin_list[-1 if st.session_state.color_state=="Widest Margin" else 1]}%<br><br>"
+                hover_text += f"by a margin of {margin_list[-1 if st.session_state.color_state=='Widest Margin' else 1]}%<br><br>"
                 state_electors = electoral_votes['Total'].sum()
                 for candidate in candidates:
                     hover_text += f"     {candidate}  -  {poll_scores['National'][candidate]}%<br>"
