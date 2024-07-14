@@ -94,23 +94,12 @@ map_type = "By State"
 
 
 #### Define Functions ####
-def update_opacity_slider():
+def update_color_slider():
     # Get values from widget
-    '''widget_vals = st.session_state['opacity_slider']
-    widget_min = int(widget_vals[0])
-    widget_max = int(widget_vals[1])'''
-    widget_val = st.session_state['opacity_slider']
-    widget_min = st.session_state.opacity_min
-    widget_max = widget_val
-
-    # Calculate middle value
-    widget_med = (2*widget_max + widget_min) / 3
-    widget_med = int(widget_med)
+    widget_val = st.session_state["color_selector"]
 
     # Update system variables
-    st.session_state.opacity_min = widget_min
-    st.session_state.opacity_max = widget_max
-    st.session_state.opacity_med = widget_med
+    st.session_state.color_state = widget_val
 
     # Update map
     update_button_press()
@@ -387,43 +376,66 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
     candidate_list = []
     elector_list = []
     hovertext_list = []
+    margin_dict = {}
+
+    # Fill data structure with all components
     for state in state_abbreviations.keys():
         state_abbrev = state_abbreviations[state]
         state_abbrev_list.append(state_abbrev)
 
+        # Add state names
         if st.session_state.map_type == 'National':
             state_name_list.append('National')
         elif st.session_state.map_type == 'By State':
             state_name_list.append(state)
 
+        # Find winners
         if st.session_state.map_type == 'National':
             winner = poll_scores['National'].idxmax() if 'National' in poll_scores.columns else None
         elif st.session_state.map_type == 'By State':
             winner = poll_scores[state].idxmax() if state in poll_scores.columns else None
         winner_list.append(winner)
         
+        # Make list of all candidates
         candidates = [x for x in poll_scores.index]
         candidate_list.append(candidates)
 
+        # Make dictionary of winning margins
+        margin_list = []
+        for candidate in candidates:
+            index_name = state if st.session_state.map_type == "By State" else "National"
+            top_score = poll_scores[index_name].max() if index_name in poll_scores.columns else 0
+            candidate_score = poll_scores[index_name][candidate] if index_name in poll_scores.columns else 0
+            winning_margin = top_score - candidate_score
+            winning_margin = round(winning_margin, 1)
+            margin_list.append(winning_margin)
+        margin_list.sort()
+        margin_dict[state if st.session_state.map_type=="By State" else "National"] = margin_list
+
+        # Add pd.Series of candidate scores
         if st.session_state.map_type == 'National':
             score = poll_scores['National'] if 'National' in poll_scores.columns else None
         elif st.session_state.map_type == 'By State':
             score = poll_scores[state] if state in poll_scores.columns else None
         score_list.append(score)
 
+        # Make party list of winner
         party = full_candidate_list[winner] if winner else None
         party_list.append(party)
 
+        # Account for number of electoral votes
         if st.session_state.map_type == 'National':
             electors = electoral_votes['Total'].sum() if 'Total' in electoral_votes.columns else None
         elif st.session_state.map_type == 'By State':
             electors = electoral_votes[state].max() if state in electoral_votes.columns else None
         elector_list.append(electors)
 
+        # Set the custom hover-text by state based on previous variables
         if st.session_state.map_type == 'By State':
             if state in poll_scores.columns:
                 hover_text = f"<b>{state}</b><br><br>"
-                hover_text += f"{poll_scores[state].idxmax()} is currently leading in {state}<br><br>"
+                hover_text += f"{poll_scores[state].idxmax()} is currently leading in {state}<br>"
+                hover_text += f"by a margin of {margin_list[-1 if st.session_state.color_state=="Widest Margin" else 1]}%<br><br>"
                 state_electors = electoral_votes[state].max()
                 for candidate in candidates:
                     hover_text += f"     {candidate}  -  {score[candidate]}%<br>"
@@ -433,7 +445,8 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
         elif st.session_state.map_type == 'National':
             if 'National' in poll_scores.columns:
                 hover_text = f"<b>National</b><br><br>"
-                hover_text += f"{poll_scores['National'].idxmax()} is currently leading nationally<br><br>"
+                hover_text += f"{poll_scores['National'].idxmax()} is currently leading nationally<br>"
+                hover_text += f"by a margin of {margin_list[-1 if st.session_state.color_state=="Widest Margin" else 1]}%<br><br>"
                 state_electors = electoral_votes['Total'].sum()
                 for candidate in candidates:
                     hover_text += f"     {candidate}  -  {poll_scores['National'][candidate]}%<br>"
@@ -442,6 +455,7 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
                 hover_text = None
         hovertext_list.append(hover_text)
 
+    # Load data structure with variables
     map_data_state['States'] = state_abbrev_list
     map_data_state['State Names'] = state_name_list
     map_data_state['Score'] = score_list
@@ -451,50 +465,12 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
     map_data_state['Electoral Count'] = elector_list
     map_data_state['Hover Text'] = hovertext_list
 
+    map_data_state = pd.DataFrame(map_data_state)
+
+    # Set preliminaries for map generation
     electoral_dict = dict(electoral_votes['Total'])
-    annotations = []
-    shapes = []
 
-    x_start = 0.80
-    y_start = 0.325
-    y_step = 0.05
-
-    for i, (candidate, votes) in enumerate(electoral_dict.items()):
-        candidate_party = full_candidate_list[candidate]
-        percentage = poll_scores['National'][candidate] if 'National' in poll_scores.columns else 0
-
-        shapes.append(go.layout.Shape(type='rect',
-                                      x0=x_start + 0.01,
-                                      y0=y_start - ((i) * y_step) + 0.0225,
-                                      x1=x_start + 0.02,
-                                      y1=y_start - ((i) * y_step) + 0.0025,
-                                      xanchor='top',
-                                      yanchor='left',
-                                      xref='paper',
-                                      yref='paper',
-                                      fillcolor=my_color_map[candidate],
-                                      line=dict(color='lightgray')))
-        
-        if st.session_state.map_type == 'By State':
-            annotations.append(dict(x=x_start + 0.025,
-                                    y=y_start - (i * y_step),
-                                    xanchor='left',
-                                    xref='paper',
-                                    yref='paper',
-                                    text=f"<b>{candidate} ({candidate_party})</b>  - {votes} EVs",
-                                    showarrow=False,
-                                    font={'size':12, 'color':'white'}))
-            
-        elif st.session_state.map_type == 'National':
-            annotations.append(dict(x=x_start + 0.025,
-                                    y=y_start - (i * y_step),
-                                    xanchor='left',
-                                    xref='paper',
-                                    yref='paper',
-                                    text=f"<b>{candidate} ({candidate_party})</b>  - {percentage}%",
-                                    showarrow=False,
-                                    font={'size':12, 'color':'white'}))
-
+    # Generate the map after defining annotations
     fig = px.choropleth(map_data_state,
                         title=f"<b>{title_str.title()}  -  {st.session_state.map_type}</b>",
                         locations='States',
@@ -504,9 +480,10 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
                         hover_name='State Names',
                         hover_data={},
                         custom_data='Hover Text',
-                        labels={'Winner':'Leading Candidate'},
+                        labels={'Winner':""},
                         scope='usa')
     
+    # Customize traces, particularly for state coloring
     z_list = []
     for trace in fig.data:
         # Get or set initial variables
@@ -514,16 +491,34 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
         cand_state_list = list(trace.hovertext)
         cand_state_list = [x for x in cand_state_list if x in poll_scores.columns]
         cand_score_list = []
+        cand_margin_list = []
+        current_z_list = []
+        if cand_name not in [None, 'None']:
+            electoral_count = electoral_dict[cand_name]
+            natl_percentage = poll_scores['National'][cand_name] if 'National' in poll_scores.columns else 0
+        else:
+            electoral_count = 0
+            natl_percentage = 0
 
-        # Get candidate-specific scores
+        # Get candidate-specific scores and margins
         for cand_state in cand_state_list:
-            cand_score_list.append(poll_scores[cand_state][cand_name])
-            z_list.append(poll_scores[cand_state][cand_name])
+            # Get candidate scores
+            cand_score = poll_scores[cand_state][cand_name]
+            cand_score_list.append(cand_score)
 
-        # Get opacity settings
-        opacity_min = round(st.session_state.opacity_min/100, 1)
-        opacity_max = round(st.session_state.opacity_max/100, 1)
-        opacity_med = round(st.session_state.opacity_med/100, 1)
+            # Get candidate margins
+            cand_margin_list = margin_dict[cand_state]
+            cand_margin_list.sort()
+            high_margin = cand_margin_list[-1]
+            low_margin = cand_margin_list[1]
+
+            # Conditionally append the scorelist
+            if st.session_state.color_state == "Vote %":
+                current_z_list.append(cand_score); z_list.append(cand_score)
+            elif st.session_state.color_state == "Widest Margin":
+                current_z_list.append(high_margin); z_list.append(high_margin)
+            else:
+                current_z_list.append(low_margin); z_list.append(low_margin)
 
         # Set colorscale by candidate's color
         color = my_color_map[cand_name]
@@ -534,9 +529,9 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
         dark_r, dark_g, dark_b = 255*max(r-0.5, 0), 255*max(g-0.5, 0), 255*max(b-0.5, 0)
         light_r, light_g, light_b = 255*min(r+0.85, 1), 255*min(g+0.85, 1), 255*min(b+0.85, 1)
 
-        lowcolor = f"rgba({dark_r}, {dark_g}, {dark_b}, {opacity_max})"
-        midcolor = f"rgba({r}, {g}, {b}, {opacity_max})"
-        hicolor = f"rgba({light_r}, {light_g}, {light_b}, {opacity_max})"
+        lowcolor = f"rgba({dark_r}, {dark_g}, {dark_b}, 255)"
+        midcolor = f"rgba({r}, {g}, {b}, 255)"
+        hicolor = f"rgba({light_r}, {light_g}, {light_b}, 255)"
 
         if st.session_state.map_type == 'By State':
             colorscale = [[0.0, hicolor], [0.5, midcolor], [1.0, lowcolor]]
@@ -544,12 +539,17 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
             colorscale = [[0.0, midcolor], [1.0, midcolor]]
 
         # Set new parameters for the trace
-        trace.z = cand_score_list if cand_score_list else trace.z
-        #trace.zmin = 40
-        #trace.zmax = 100
-        #trace.zmid = 50
+        trace.z = current_z_list if current_z_list else trace.z
         trace.colorscale = colorscale
+        if trace.name in [None, 'None']:
+            trace.name = "<b>No polls for this range</b>"
+        else:
+            if st.session_state.map_type == "By State":
+                trace.name = f"<b>{cand_name}</b>   -   {electoral_count} EC votes"
+            elif st.session_state.map_type == "National":
+                trace.name = f"<b>{cand_name}</b>   -   {natl_percentage}%"
 
+    # Set the overall data comparison range
     if z_list:
         z_list.sort()
         z_min = z_list[0]
@@ -559,6 +559,28 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
                         zmax=z_max)
     else:
         fig.update_traces(hovertemplate="%{customdata}")
+
+    # Add dummy traces for missing candidates
+    present_candidates = map_data_state['Winner'].unique()
+    for candidate_item in candidates:
+        if st.session_state.map_type == "National":
+            natl_score = poll_scores['National'][candidate_item] if 'National' in poll_scores.columns else 0
+            text_add = f"   -   {natl_score}%"
+        elif st.session_state.map_type == "By State":
+            elec_score = electoral_count = electoral_dict[candidate_item] if candidate_item in electoral_dict.keys() else 0
+            text_add = f"   -   {elec_score} EC votes"
+        else:
+            text_add = ""
+        if candidate_item not in present_candidates:
+            dummy_trace = (go.Scatter(
+                x=[None], y=[None],
+                mode='markers',
+                marker=dict(size=14, color=my_color_map[candidate_item]),
+                showlegend=True,
+                name=f"<b>{candidate_item}</b>"+text_add))
+
+            # Add the trace
+            fig.add_trace(dummy_trace)
     
     fig.update_geos(visible=False, 
                     resolution=50,
@@ -573,11 +595,12 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
                       width=1800,
                       height=700,
                       title={'font':{'size':20, 'color':'white'}, 'x':0.5, 'y':0.975, 'xanchor': 'center'},
-                      legend={'y': 0.75, 'yanchor': 'middle'},
-                      showlegend=False,
-                      annotations=annotations,
-                      shapes=shapes,
-                      dragmode=False)
+                      legend={'y': 0.375, 'yanchor': 'top',
+                              'x': 0.8, 'xanchor': 'left'},
+                      showlegend=True,
+                      dragmode=False,
+                      xaxis_visible=False,
+                      yaxis_visible=False)
     
     st.session_state.figure = fig
 
@@ -631,12 +654,8 @@ if 'button_text' not in st.session_state:
     st.session_state['button_text'] = "Generate Map"
 if 'run_initial' not in st.session_state:
     st.session_state['run_initial'] = True
-if 'opacity_min' not in st.session_state:
-    st.session_state['opacity_min'] = 30
-if 'opacity_med' not in st.session_state:
-    st.session_state['opacity_med'] = 90
-if 'opacity_max' not in st.session_state:
-    st.session_state['opacity_max'] = 100
+if 'color_state' not in st.session_state:
+    st.session_state['color_state'] = "Vote %"
 
 
 
@@ -707,14 +726,12 @@ st.sidebar.button(label=st.session_state.button_text,
 
 st.sidebar.header("")
 st.sidebar.header("")
-st.sidebar.slider("Opacity Setting",
-                  min_value=5,
-                  max_value=100,
-                  value=(st.session_state.opacity_max),
-                  step=1,
-                  key="opacity_slider",
-                  on_change=update_opacity_slider,
-                  help="Sets the color range for the map.  A larger range shows a bigger difference between states.  The color for the national map is calculated based off these settings.")
+st.sidebar.select_slider("Color Map By...",
+                         options=["Lead Margin", "Widest Margin", "Vote %"],
+                         value=st.session_state.color_state,
+                         key="color_selector",
+                         help="The lead margin is the difference between the leader and second place.  The widest margin is the difference between the leader and last place.  If there are only two candidates, the margins will be the same.  (When set to widest margin, the value in the hover text will change)",
+                         on_change=update_color_slider)
 
 if st.session_state.run_initial:
     update_widget_display()
