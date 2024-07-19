@@ -88,12 +88,25 @@ timeframe_options = ["All polling this cycle", "All of 2024", "Latest polling re
                      "Last 180 days (6 mo)", "Last 270 days (9 mo)", "Last 365 days (1 yr)"]
 pollster_options = []
 population_options = ["Everyone", "Likely Voters", "Registered Voters", "All Respondents"]
-weighting_options = ["Unweighted Average", "Pollster Rating", "Sample Size"]
+weighting_options = ["Unweighted Average", "Pollster Rating", "Sample Size", "Recency"]
 map_type = "By State"
+quantity_options = [25, 50, 100, 250, 500, 1000, 2000]
 
 
 
 #### Define Functions ####
+def set_poll_quantity():
+    # Get values from widget
+    widget_val = st.session_state["quantity_selector"]
+
+    # Update system variables
+    st.session_state.poll_quantity = int(widget_val)
+
+    # Update map
+    update_button_press()
+
+    return
+
 def update_color_slider():
     # Get values from widget
     widget_val = st.session_state["color_selector"]
@@ -263,6 +276,8 @@ def update_button_press():
         weight = "pollster grade"
     elif weight == "Sample Size":
         weight = "sample size"
+    elif weight == "Recency":
+        weight = "recency"
     else:
         weight = "unweighted average"
 
@@ -355,6 +370,8 @@ def update_button_press():
     # Use parsed data to get calculations
     poll_results_df = dataCollection.data_processing(parsed_df, candidate_list=candidates, weight_type=weight)
     electoral_vote_df, polled_state_list = dataCollection.calculate_electoral_votes(poll_results_df, candidate_list=candidates)
+
+    get_poll_data(parsed_df)
 
     make_map(poll_results_df, electoral_vote_df, polled_state_list, timeframe)
 
@@ -496,9 +513,11 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
         if cand_name not in [None, 'None']:
             electoral_count = electoral_dict[cand_name]
             natl_percentage = poll_scores['National'][cand_name] if 'National' in poll_scores.columns else 0
+            cand_party = full_candidate_list[cand_name][0]
         else:
             electoral_count = 0
             natl_percentage = 0
+            cand_party = ""
 
         # Get candidate-specific scores and margins
         for cand_state in cand_state_list:
@@ -545,9 +564,9 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
             trace.name = "<b>No polls for this range</b>"
         else:
             if st.session_state.map_type == "By State":
-                trace.name = f"<b>{cand_name}</b>   -   {electoral_count} EC votes"
+                trace.name = f"<b>{cand_name} ({cand_party})</b>   -   {electoral_count} EC votes"
             elif st.session_state.map_type == "National":
-                trace.name = f"<b>{cand_name}</b>   -   {natl_percentage}%"
+                trace.name = f"<b>{cand_name} ({cand_party})</b>   -   {natl_percentage}%"
 
     # Set the overall data comparison range
     if z_list:
@@ -563,6 +582,7 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
     # Add dummy traces for missing candidates
     present_candidates = map_data_state['Winner'].unique()
     for candidate_item in candidates:
+        candidate_party = full_candidate_list[candidate_item][0]
         if st.session_state.map_type == "National":
             natl_score = poll_scores['National'][candidate_item] if 'National' in poll_scores.columns else 0
             text_add = f"   -   {natl_score}%"
@@ -577,7 +597,7 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
                 mode='markers',
                 marker=dict(size=14, color=my_color_map[candidate_item]),
                 showlegend=True,
-                name=f"<b>{candidate_item}</b>"+text_add))
+                name=f"<b>{candidate_item} ({candidate_party})</b>"+text_add))
 
             # Add the trace
             fig.add_trace(dummy_trace)
@@ -593,10 +613,10 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
                       paper_bgcolor='rgba(0,0,0,0)',
                       margin=dict(l=0, r=0, t=0, b=0),
                       width=1400,
-                      height=720,
+                      height=700,
                       title={'font':{'size':20, 'color':'white'}, 
                              'x':0.5, 'xanchor': 'center',
-                             'y':0.99, 'yanchor':'top'},
+                             'y':1, 'yanchor':'top'},
                       legend={'y': 0, 'yanchor': 'top',
                               'x': 0.5, 'xanchor': 'center',
                               'orientation': 'h', 
@@ -607,6 +627,60 @@ def make_map(poll_scores:pd.DataFrame, electoral_votes:pd.DataFrame, state_list:
                       yaxis_visible=False)
     
     st.session_state.figure = fig
+
+    return
+
+def get_poll_data(data:pd.DataFrame):
+    # Sort DataFrame by date descending
+    data = data.sort_values(by='end_date', ascending=False)
+
+    # Get list of unique poll IDs
+    pollID_list = data['poll_id'].unique()
+
+    #Build the title row string
+    lab1, lab2, lab3 = "Date:", "Range:", "Pollster:"
+    lab4, lab5, lab6 = "Grade:","Sample:", "Population:"
+
+    title_str = [lab1, lab2, lab3, lab4, lab5, lab6]
+
+    st.session_state.poll_header = title_str
+
+    # Get poll data by column
+    working_list = []
+    for pollID in pollID_list:
+        working_df = data.loc[data['poll_id']==pollID]
+        sample_size = working_df['sample_size'].values[0]
+        pollster = working_df['pollster'].values[0]
+        numeric_grade = working_df['numeric_grade'].values[0]
+        methodology = working_df['methodology'].values[0]
+        poll_state = working_df['state'].values[0]
+        poll_date = working_df['end_date'].values[0]
+        voter_population = working_df['population'].values[0]
+        # Elaborate voter population
+        if voter_population == 'rv':
+            voter_population = "Registered Voters"
+        elif voter_population == 'lv':
+            voter_population = "Likely Voters"
+        elif voter_population == 'v':
+            voter_population = "Voters"
+        else:
+            voter_population = "All Respondents"
+        # Elaborate on polled state
+        if poll_state == " ":
+            poll_state = "National"
+        # Round numeric grade
+        numeric_grade = round(numeric_grade, 1)
+
+        # Build the main string
+        item1, item2, item3 = str(poll_date), poll_state, pollster
+        item4, item5, item6 = numeric_grade, int(sample_size), voter_population
+
+        working_list.append([item1, item2, item3, item4, item5, item6])
+    
+    if len(working_list) > st.session_state.poll_quantity:
+        st.session_state.poll_text = working_list[:st.session_state.poll_quantity]
+    else:
+        st.session_state.poll_text = working_list[:-1]
 
     return
 
@@ -660,6 +734,12 @@ if 'run_initial' not in st.session_state:
     st.session_state['run_initial'] = True
 if 'color_state' not in st.session_state:
     st.session_state['color_state'] = "Vote %"
+if 'poll_text' not in st.session_state:
+    st.session_state['poll_text'] = None
+if 'poll_header' not in st.session_state:
+    st.session_state['poll_header'] = None
+if 'poll_quantity' not in st.session_state:
+    st.session_state['poll_quantity'] = 25
 
 
 
@@ -729,13 +809,34 @@ st.sidebar.button(label=st.session_state.button_text,
                   on_click=update_button_press)
 
 st.sidebar.header("")
-st.sidebar.header("")
 st.sidebar.select_slider("Color Map By...",
                          options=["Lead Margin", "Widest Margin", "Vote %"],
                          value=st.session_state.color_state,
                          key="color_selector",
                          help="The lead margin is the difference between the leader and second place.  The widest margin is the difference between the leader and last place.  If there are only two candidates, the margins will be the same.  (When set to widest margin, the value in the hover text will change)",
                          on_change=update_color_slider)
+
+if st.session_state.poll_text and st.session_state.poll_header:
+    st.write("")
+    st.write("")
+    co1, co2, c03 = st.columns([2,1,2])
+    with co1:
+        st.header(f"Included Polls")
+    with co2:
+        st.selectbox("Number of Polls Shown",
+                     options=quantity_options,
+                     on_change=set_poll_quantity,
+                     key="quantity_selector")
+
+    c_list = st.columns([2,2,5,2,2,2])
+    for i, c in enumerate(c_list):
+        with c:
+            st.subheader(st.session_state.poll_header[i])
+    
+    for poll in st.session_state.poll_text:
+        for j, c in enumerate(c_list):
+            with c:
+                st.write(poll[j])
 
 if st.session_state.run_initial:
     update_widget_display()

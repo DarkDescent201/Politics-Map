@@ -337,7 +337,7 @@ def sort_polls_into_questions(data:dict={}) -> dict: # Must be sorted into polls
 
 def data_processing(data:pd.DataFrame, candidate_list:list, weight_type:str="unweighted average") -> pd.DataFrame:
     # Defining terms
-    weighting_methods = ["unweighted average", "pollster grade", "sample size"]
+    weighting_methods = ["unweighted average", "pollster grade", "sample size", "recency"]
     if weight_type in weighting_methods:
         pass
     else:
@@ -356,6 +356,27 @@ def data_processing(data:pd.DataFrame, candidate_list:list, weight_type:str="unw
         numeric_grade = question_data['numeric_grade'].iloc[0]
         sample_size = question_data['sample_size'].iloc[0]
         state_polled = question_data['state'].iloc[0]
+        date_polled = question_data['end_date'].iloc[0]
+
+        # Set recency score based on date
+        today_now = datetime.now().date()
+        one_week = today_now - timedelta(days=7)
+        one_month = today_now - timedelta(days=30)
+        three_months = today_now - timedelta(days=90)
+        six_months = today_now - timedelta(days=180)
+
+        if date_polled == today_now:
+            recency_score = 6
+        elif today_now > date_polled >= one_week:
+            recency_score = 5
+        elif one_week > date_polled >= one_month:
+            recency_score = 4
+        elif one_month > date_polled >= three_months:
+            recency_score = 3
+        elif three_months > date_polled >= six_months:
+            recency_score = 2
+        else:
+            recency_score = 1
 
         if state_polled == " ":
             state_polled = "National"
@@ -369,6 +390,9 @@ def data_processing(data:pd.DataFrame, candidate_list:list, weight_type:str="unw
         elif weight_type == "sample size":
             denominator = sample_size
             denominator = int(denominator)
+        elif weight_type == "recency":
+            denominator = recency_score
+            denominator = int(denominator)
         else:
             denominator = 1
 
@@ -380,7 +404,10 @@ def data_processing(data:pd.DataFrame, candidate_list:list, weight_type:str="unw
                 current_score = round(current_score, 1)
             elif weight_type == "sample size":
                 current_score = current_score * sample_size
-                current_score = int(current_score)
+                current_score = round(current_score, 1)
+            elif weight_type == "recency":
+                current_score = current_score * recency_score
+                current_score = round(current_score, 1)
             else:
                 pass
             
