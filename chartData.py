@@ -12,24 +12,33 @@ URL_APP = "https://projects.fivethirtyeight.com/biden-approval-data/approval_top
 string_columns = ["politician", "subpopulation", "answer"]
 date_columns = ["date"]
 number_columns = ["pct_estimate", "lo", "hi"]
+color_dict = {"Donald Trump": "red", "Joe Biden": "blue", "Robert F. Kennedy": "beige"}
 
 
 
 #### Define Functions ####
-def acquire_data() -> pd.DataFrame:
+def acquire_data(show_list:list=[True,True,True], favorability_type:str="Favorable") -> pd.DataFrame:
     # Down CSV dataset
     full_df = pd.read_csv(URL_FAV)
     full_df = full_df.loc[full_df['subpopulation'].isna()]
     full_df.drop('subpopulation', axis=1, inplace=True)
 
+    # Manually adding Trump data didn't work, so let's cheat by simply dropping the offending rows
+    full_df = full_df[~full_df['date'].isin(['2023-10-07', '2023-10-08'])]
+
     # Parse for specific candidates of interest
-    candidate_list = ['Donald Trump', 'Joe Biden', 'Robert F. Kennedy']
+    prelim_list = ['Donald Trump', 'Joe Biden', 'Robert F. Kennedy']
+    candidate_list = []
+
+    for i, truth in enumerate(show_list):
+        if truth:
+            candidate_list.append(prelim_list[i])
 
     return_data = full_df.loc[full_df['politician'].isin(candidate_list)]
 
     return return_data
     
-def build_plot(data=pd.DataFrame, favorability_type:str="Favorable"):
+def build_plot(data=pd.DataFrame, poll_date:datetime.date="common", favorability_type:str="Favorable"):
     # Validate input data
     try:
         full_df = pd.DataFrame(data)
@@ -41,6 +50,18 @@ def build_plot(data=pd.DataFrame, favorability_type:str="Favorable"):
     # Filter DF by Favorability type
     full_df = full_df.loc[full_df['answer'] == favorability]
 
+    # Deal with the dates
+    copy_df = full_df.copy()
+
+    if poll_date == "common":
+        earliest_dates = copy_df.groupby('politician')['date'].min()
+        earliest_common_date = earliest_dates.max()
+        full_df = full_df[full_df['date'] >= earliest_common_date]
+    else:
+        full_df = full_df[full_df['date'] >= poll_date]
+
+    ##### Leave off point:  Figuring out the artifacts, it's due to Trump missing 2 dates and thus having mismatched arrays.  Either filter differently or find a way to fill in the missing data with something.
+
     # Acquire unique candidate list and sort by Favorability type
     candidate_list = full_df['politician'].unique()
         
@@ -48,27 +69,39 @@ def build_plot(data=pd.DataFrame, favorability_type:str="Favorable"):
     fig = go.Figure()
 
     # Make traces for scatterplot
-    color_dict = {"Donald Trump": "red", "Joe Biden": "blue", "Robert F. Kennedy": "beige"}
-    for candidate in candidate_list:
+    for candidate in candidate_list[::-1]:
         candidate_color = color_dict[candidate]
-        trace = go.Line(x = full_df['date'],
-                           y = full_df.loc[full_df['politician']==candidate, 'pct_estimate'],
+        trace = go.Scatter(x = full_df['date'],
+                           y = full_df.loc[full_df['politician']==candidate, 'pct_estimate'].round(2),
                            mode = 'lines',
                            line_shape = 'spline',
                            connectgaps = True,
                            name = candidate,
-                           line = dict(color = candidate_color))
+                           line = dict(color = candidate_color,
+                                       width = 2))
         
         fig.add_trace(trace)
 
     # Update the figure layout
-    fig.update_layout(title = "Favorability Ratings",
+    fig.update_layout(title = "",
                       xaxis_title = "Date",
                       yaxis_title = "Favorability",
                       legend_title = "Candidates",
-                      hovermode = "x unified",
-                      plot_bgcolor='darkgrey',
-                      yaxis_range = [10, 90])
+                      hovermode = "x",
+                      plot_bgcolor = 'black',
+                      paper_bgcolor = 'black',
+                      xaxis = {'tickfont':{'color':'#6D8DAD'},
+                               'titlefont':{'color':'#6D8DAD',
+                                            'family': 'Arial Black'}},
+                      yaxis = {'tickfont':{'color':'#6D8DAD'},
+                               'titlefont':{'color':'#6D8DAD',
+                                            'family': 'Arial Black'}},
+                      yaxis_range = None, #[10, 70],# if favorability_type=="Unfavorable" else [20, 60],
+                      legend = {'font':{'color':'#6D8DAD'},
+                                'title_font': {'family': 'Arial Black'}})
+    
+    fig.update_xaxes(showgrid=False)
+    fig.update_yaxes(showgrid=False)
     
     return fig
 
@@ -77,6 +110,5 @@ def build_plot(data=pd.DataFrame, favorability_type:str="Favorable"):
 #### Main Actions ####
 if __name__ == "__main__":
     a = acquire_data()
-    print('\n', a, type(a), '\n')
-    b = build_plot(a)
+    b = build_plot(a, poll_date="common")
     b.show()

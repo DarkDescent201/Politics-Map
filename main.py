@@ -2,7 +2,7 @@
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
-import dataCollection
+import dataCollection, chartData
 import streamlit as st
 import matplotlib.colors as mcolors
 
@@ -135,6 +135,30 @@ def set_maptype_national():
 
 def set_maptype_state():
     st.session_state.map_type = "By State"
+
+    if st.session_state.button_text == "Update Map":
+        update_button_press()
+
+    return
+
+def set_favtype_favorable():
+    st.session_state.favor_type = "Favorable"
+
+    if st.session_state.button_text == "Update Map":
+        update_button_press()
+
+    return
+
+def set_favtype_unfavorable():
+    st.session_state.favor_type = "Unfavorable"
+
+    if st.session_state.button_text == "Update Map":
+        update_button_press()
+
+    return
+
+def set_favtype_approval():
+    st.session_state.favor_type = "Approval"
 
     if st.session_state.button_text == "Update Map":
         update_button_press()
@@ -372,7 +396,7 @@ def update_button_press():
     electoral_vote_df, polled_state_list = dataCollection.calculate_electoral_votes(poll_results_df, candidate_list=candidates)
 
     get_poll_data(parsed_df)
-
+    get_favorability_chart([st.session_state.show_dt, st.session_state.show_jb, st.session_state.show_rfk])
     make_map(poll_results_df, electoral_vote_df, polled_state_list, timeframe)
 
     return
@@ -684,6 +708,18 @@ def get_poll_data(data:pd.DataFrame):
 
     return
 
+def get_favorability_chart(showlist:list=[True,True,True]):
+    chart_data = chartData.acquire_data(showlist, st.session_state.favor_type)
+
+    display_date = "common"
+    favorability_type = st.session_state.favor_type
+
+    chart_figure = chartData.build_plot(chart_data, display_date, favorability_type)
+
+    st.session_state.favorability_chart = chart_figure
+
+    return
+
 @st.cache_data
 def initial_data_load():
     global full_candidate_list
@@ -740,29 +776,75 @@ if 'poll_header' not in st.session_state:
     st.session_state['poll_header'] = None
 if 'poll_quantity' not in st.session_state:
     st.session_state['poll_quantity'] = 25
-
+if 'favorability_chart' not in st.session_state:
+    st.session_state['favorability_chart'] = None
+if 'show_dt' not in st.session_state:
+    st.session_state['show_dt'] = True
+if 'show_jb' not in st.session_state:
+    st.session_state['show_jb'] = True
+if 'show_rfk' not in st.session_state:
+    st.session_state['show_rfk'] = True
+if 'favor_type' not in st.session_state:
+    st.session_state['favor_type'] = "Favorable"
 
 
 #### Page Layout ####
+colu1, colu2, colu3 = st.columns([1,2,1])
+with colu2:
+    st.title("2024 Presidential Election Data")
 # Top Main Line
-st.title("United States Election Polling Map",
-         help="Data supplied by FiveThirtyEight.com aggregate presidential polls")
+st.subheader("Favorability Tracking",
+             help="Data supplied by FiveThirtyEight.com favorability and approval polls.")
 
-col1, col2, col3 = st.columns([1,1,3])
-with col1:
-    st.button(label="National",
-              key="national_button",
-              help="Displays national data on the map",
-              use_container_width=True,
-              on_click=set_maptype_national)
-with col2:
-    st.button(label="By State",
-              key="bystate_button",
-              help="Displays the statewide data on the map",
-              use_container_width=True,
-              on_click=set_maptype_state)
+if st.session_state.favorability_chart:
+    col11, col22, col33, col44 = st.columns([1,1,1,3])
+
+    with col11:
+        st.button(label="Favorability",
+                key="favorable_button",
+                help="Displays favorability data on the chart.",
+                use_container_width=True,
+                type="primary" if st.session_state.favor_type=="Favorable" else "secondary",
+                on_click=set_favtype_favorable)
+    with col22:
+        st.button(label="Unfavorability",
+                key="unfavorable_button",
+                help="Displays unfavorability data on the chart.",
+                use_container_width=True,
+                type="primary" if st.session_state.favor_type=="Unfavorable" else "secondary",
+                on_click=set_favtype_unfavorable)
+    with col33:
+        st.button(label="Approval",
+                key="approval_button",
+                help="UNDER CONSTRUCTION.  Displays approval data on the chart.  Only applies to the current president.",
+                use_container_width=True,
+                type="primary" if st.session_state.favor_type=="Approval" else "secondary",
+                on_click=set_favtype_approval)
+        
+    st.plotly_chart(st.session_state.favorability_chart, use_container_width=True)
+
+st.write("")
+st.subheader("United States Election Polling Map",
+         help="Data supplied by FiveThirtyEight.com aggregate presidential polls.")
 
 if st.session_state.figure:
+    col1, col2, col3 = st.columns([1,1,3])
+
+    with col1:
+        st.button(label="National",
+                key="national_button",
+                help="Displays national data on the map.",
+                use_container_width=True,
+                type="primary" if st.session_state.map_type=="National" else "secondary",
+                on_click=set_maptype_national)
+    with col2:
+        st.button(label="By State",
+                key="bystate_button",
+                help="Displays the statewide data on the map.",
+                use_container_width=True,
+                type="primary" if st.session_state.map_type=="By State" else "secondary",
+                on_click=set_maptype_state)
+        
     st.plotly_chart(st.session_state.figure)
     
 # Sidebar options
@@ -816,18 +898,18 @@ st.sidebar.select_slider("Color Map By...",
                          help="The lead margin is the difference between the leader and second place.  The widest margin is the difference between the leader and last place.  If there are only two candidates, the margins will be the same.  (When set to widest margin, the value in the hover text will change)",
                          on_change=update_color_slider)
 
+st.write("")
+co1, co2, c03 = st.columns([2,1,2])
+with co1:
+    st.subheader(f"Included Polls",
+                    help="This poll list is for the state map and associated information.  Favorability and approval data is from a different dataset.")
+
 if st.session_state.poll_text and st.session_state.poll_header:
-    st.write("")
-    st.write("")
-    co1, co2, c03 = st.columns([2,1,2])
-    with co1:
-        st.header(f"Included Polls")
     with co2:
         st.selectbox("Number of Polls Shown",
-                     options=quantity_options,
-                     on_change=set_poll_quantity,
-                     key="quantity_selector")
-
+                        options=quantity_options,
+                        on_change=set_poll_quantity,
+                        key="quantity_selector")
     c_list = st.columns([2,2,5,2,2,2])
     for i, c in enumerate(c_list):
         with c:
@@ -843,3 +925,5 @@ if st.session_state.run_initial:
     update_button_press()
     st.session_state.run_initial = False
     st.rerun()
+
+#### Leave Off Point:  Everything is working good that's been built.  Need to add Approval functionality, as well as candidate choosing and date ranging.
