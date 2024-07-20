@@ -12,33 +12,42 @@ URL_APP = "https://projects.fivethirtyeight.com/biden-approval-data/approval_top
 string_columns = ["politician", "subpopulation", "answer"]
 date_columns = ["date"]
 number_columns = ["pct_estimate", "lo", "hi"]
-color_dict = {"Donald Trump": "red", "Joe Biden": "blue", "Robert F. Kennedy": "beige"}
+color_dict = {"Donald Trump": "red", "Joe Biden": "blue", "Robert F. Kennedy": "beige",
+              "Approve": 'green', "Disapprove": 'orange'}
 
 
 
 #### Define Functions ####
 def acquire_data(show_list:list=[True,True,True], favorability_type:str="Favorable") -> pd.DataFrame:
     # Down CSV dataset
-    full_df = pd.read_csv(URL_FAV)
-    full_df = full_df.loc[full_df['subpopulation'].isna()]
-    full_df.drop('subpopulation', axis=1, inplace=True)
+    if favorability_type == "Approval":
+        full_df = pd.read_csv(URL_APP)
+        full_df.drop(['subpopulation', 'polltype', 'subgroup', 'timestamp'], axis=1)
 
-    # Manually adding Trump data didn't work, so let's cheat by simply dropping the offending rows
-    full_df = full_df[~full_df['date'].isin(['2023-10-07', '2023-10-08'])]
+        return full_df
 
-    # Parse for specific candidates of interest
-    prelim_list = ['Donald Trump', 'Joe Biden', 'Robert F. Kennedy']
-    candidate_list = []
+    else:
+        full_df = pd.read_csv(URL_FAV)
 
-    for i, truth in enumerate(show_list):
-        if truth:
-            candidate_list.append(prelim_list[i])
+        full_df = full_df.loc[full_df['subpopulation'].isna()]
+        full_df.drop('subpopulation', axis=1, inplace=True)
 
-    return_data = full_df.loc[full_df['politician'].isin(candidate_list)]
+        # Manually adding Trump data didn't work, so let's cheat by simply dropping the offending rows
+        full_df = full_df[~full_df['date'].isin(['2023-10-07', '2023-10-08'])]
 
-    return return_data
+        # Parse for specific candidates of interest
+        prelim_list = ['Donald Trump', 'Joe Biden', 'Robert F. Kennedy']
+        candidate_list = []
+
+        for i, truth in enumerate(show_list):
+            if truth:
+                candidate_list.append(prelim_list[i])
+
+        return_data = full_df.loc[full_df['politician'].isin(candidate_list)]
+
+        return return_data
     
-def build_plot(data=pd.DataFrame, poll_date:datetime.date="common", favorability_type:str="Favorable"):
+def build_plot_fav(data=pd.DataFrame, poll_date:datetime.date="common", favorability_type:str="Favorable"):
     # Validate input data
     try:
         full_df = pd.DataFrame(data)
@@ -85,8 +94,62 @@ def build_plot(data=pd.DataFrame, poll_date:datetime.date="common", favorability
     # Update the figure layout
     fig.update_layout(title = "",
                       xaxis_title = "Date",
-                      yaxis_title = "Favorability",
+                      yaxis_title = "Score",
                       legend_title = "Candidates",
+                      hovermode = "x",
+                      plot_bgcolor = 'black',
+                      paper_bgcolor = 'black',
+                      xaxis = {'tickfont':{'color':'#6D8DAD'},
+                               'titlefont':{'color':'#6D8DAD',
+                                            'family': 'Arial Black'}},
+                      yaxis = {'tickfont':{'color':'#6D8DAD'},
+                               'titlefont':{'color':'#6D8DAD',
+                                            'family': 'Arial Black'}},
+                      yaxis_range = None, #[10, 70],# if favorability_type=="Unfavorable" else [20, 60],
+                      legend = {'font':{'color':'#6D8DAD'},
+                                'title_font': {'family': 'Arial Black'}})
+    
+    fig.update_xaxes(showgrid=False)
+    fig.update_yaxes(showgrid=False)
+    
+    return fig
+
+def build_plot_app(data:pd.DataFrame):
+    # Validate inputs
+    try:
+        full_df = pd.DataFrame(data)
+    except Exception as e:
+        print("\n", f"Error Report:    {e}", "\n")
+
+    # Initialize chart
+    fig = go.Figure()
+
+    # Populate data
+    trace1 = go.Scatter(x = full_df['end_date'],
+                        y = full_df['approve_estimate'].round(2),
+                        mode = 'lines',
+                        line_shape = 'spline',
+                        connectgaps = True,
+                        name = "Approve",
+                        line = dict(color = 'cyan',
+                                    width = 2))
+    
+    trace2 = go.Scatter(x = full_df['end_date'],
+                        y = full_df['disapprove_estimate'],
+                        mode = 'lines',
+                        line_shape = 'spline',
+                        connectgaps = True,
+                        name = "Disapprove",
+                        line = dict(color = 'magenta',
+                                    width = 2))
+    
+    fig.add_trace(trace2); fig.add_trace(trace1)
+
+    # Update the figure layout
+    fig.update_layout(title = "",
+                      xaxis_title = "Date",
+                      yaxis_title = "Score",
+                      legend_title = "Sentiment",
                       hovermode = "x",
                       plot_bgcolor = 'black',
                       paper_bgcolor = 'black',
@@ -109,6 +172,6 @@ def build_plot(data=pd.DataFrame, poll_date:datetime.date="common", favorability
 
 #### Main Actions ####
 if __name__ == "__main__":
-    a = acquire_data()
-    b = build_plot(a, poll_date="common")
+    a = acquire_data(favorability_type="Approval")
+    b = build_plot_app(a)
     b.show()

@@ -709,12 +709,15 @@ def get_poll_data(data:pd.DataFrame):
     return
 
 def get_favorability_chart(showlist:list=[True,True,True]):
-    chart_data = chartData.acquire_data(showlist, st.session_state.favor_type)
-
     display_date = "common"
     favorability_type = st.session_state.favor_type
 
-    chart_figure = chartData.build_plot(chart_data, display_date, favorability_type)
+    chart_data = chartData.acquire_data(showlist, favorability_type)
+
+    if st.session_state.favor_type in ["Favorable", "Unfavorable"]:
+        chart_figure = chartData.build_plot_fav(chart_data, display_date, favorability_type)
+    elif st.session_state.favor_type == "Approval":
+        chart_figure = chartData.build_plot_app(chart_data)
 
     st.session_state.favorability_chart = chart_figure
 
