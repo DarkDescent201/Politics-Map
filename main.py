@@ -797,7 +797,7 @@ with colu2:
     st.title("2024 Presidential Election Data")
 # Top Main Line
 st.subheader("Favorability Tracking",
-             help="Data supplied by FiveThirtyEight.com favorability and approval polls.")
+             help="Data supplied by FiveThirtyEight.com favorability and approval polls.  Click on a candidate's name to toggle them on or off from the view.")
 
 if st.session_state.favorability_chart:
     col11, col22, col33, col44 = st.columns([1,1,1,3])
@@ -824,7 +824,9 @@ if st.session_state.favorability_chart:
                 type="primary" if st.session_state.favor_type=="Approval" else "secondary",
                 on_click=set_favtype_approval)
         
-    st.plotly_chart(st.session_state.favorability_chart, use_container_width=True)
+    st.plotly_chart(st.session_state.favorability_chart,
+                    use_container_width=True,
+                    key="favor_chart")
 
 st.write("")
 st.subheader("United States Election Polling Map",
@@ -848,7 +850,8 @@ if st.session_state.figure:
                 type="primary" if st.session_state.map_type=="By State" else "secondary",
                 on_click=set_maptype_state)
         
-    st.plotly_chart(st.session_state.figure)
+    st.plotly_chart(st.session_state.figure,
+                    key="map_figure")
     
 # Sidebar options
 
