@@ -788,7 +788,7 @@ if 'show_jb' not in st.session_state:
 if 'show_rfk' not in st.session_state:
     st.session_state['show_rfk'] = True
 if 'favor_type' not in st.session_state:
-    st.session_state['favor_type'] = "Favorable"
+    st.session_state['favor_type'] = "Approval"
 
 
 #### Page Layout ####
