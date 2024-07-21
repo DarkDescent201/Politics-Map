@@ -5,6 +5,7 @@ import pandas as pd
 import dataCollection, chartData
 import streamlit as st
 import matplotlib.colors as mcolors
+from datetime import datetime, timedelta
 
 
 
@@ -91,10 +92,53 @@ population_options = ["Everyone", "Likely Voters", "Registered Voters", "All Res
 weighting_options = ["Unweighted Average", "Pollster Rating", "Sample Size", "Recency"]
 map_type = "By State"
 quantity_options = [25, 50, 100, 250, 500, 1000, 2000]
+timeline_options = ["Earliest Common Date", "Entire Election Cycle", "Last 30 Days",
+                    "Last 60 Days", "Last 90 Days", "Last 120 Days",
+                    "Last 6 Months", "Last 9 Months", "Last Year"]
 
 
 
 #### Define Functions ####
+def set_poll_timeline():
+    # Get values from widget
+    widget_val = st.session_state["favor_time"]
+    now = datetime.now()
+
+    # Set response value conditionally
+    if widget_val == "Entire Election Cycle":
+        new_date = "2021-01-01"
+    elif widget_val == "Last 30 Days":
+        new_date = now - timedelta(days=30)
+        new_date = new_date.date()
+    elif widget_val == "Last 60 Days":
+        new_date = now - timedelta(days=60)
+        new_date = new_date.date()
+    elif widget_val == "Last 90 Days":
+        new_date = now - timedelta(days=90)
+        new_date = new_date.date()
+    elif widget_val == "Last 120 Days":
+        new_date = now - timedelta(days=120)
+        new_date = new_date.date()
+    elif widget_val == "Last 6 Months":
+        new_date = now - timedelta(days=180)
+        new_date = new_date.date()
+    elif widget_val == "Last 9 Months":
+        new_date = now - timedelta(days=270)
+        new_date = new_date.date()
+    elif widget_val == "Last Year":
+        new_date = now - timedelta(days=365)
+        new_date = new_date.date()
+    else:
+        new_date = "common"
+
+    # Update system variables
+    st.session_state.chart_timeline = new_date
+
+    # Update map
+    update_button_press()
+
+    return
+
 def set_poll_quantity():
     # Get values from widget
     widget_val = st.session_state["quantity_selector"]
@@ -396,7 +440,8 @@ def update_button_press():
     electoral_vote_df, polled_state_list = dataCollection.calculate_electoral_votes(poll_results_df, candidate_list=candidates)
 
     get_poll_data(parsed_df)
-    get_favorability_chart([st.session_state.show_dt, st.session_state.show_jb, st.session_state.show_rfk])
+    get_favorability_chart([st.session_state.show_dt, st.session_state.show_jb, st.session_state.show_rfk],
+                           st.session_state.chart_timeline)
     make_map(poll_results_df, electoral_vote_df, polled_state_list, timeframe)
 
     return
@@ -708,8 +753,8 @@ def get_poll_data(data:pd.DataFrame):
 
     return
 
-def get_favorability_chart(showlist:list=[True,True,True]):
-    display_date = "common"
+def get_favorability_chart(showlist:list=[True,True,True], start_date:datetime.date="common"):
+    display_date = start_date
     favorability_type = st.session_state.favor_type
 
     chart_data = chartData.acquire_data(showlist, favorability_type)
@@ -717,7 +762,7 @@ def get_favorability_chart(showlist:list=[True,True,True]):
     if st.session_state.favor_type in ["Favorable", "Unfavorable"]:
         chart_figure = chartData.build_plot_fav(chart_data, display_date, favorability_type)
     elif st.session_state.favor_type == "Approval":
-        chart_figure = chartData.build_plot_app(chart_data)
+        chart_figure = chartData.build_plot_app(chart_data, display_date)
 
     st.session_state.favorability_chart = chart_figure
 
@@ -789,18 +834,23 @@ if 'show_rfk' not in st.session_state:
     st.session_state['show_rfk'] = True
 if 'favor_type' not in st.session_state:
     st.session_state['favor_type'] = "Approval"
+if 'chart_timeline' not in st.session_state:
+    st.session_state['chart_timeline'] = 'common'
 
 
 #### Page Layout ####
+# Page title
 colu1, colu2, colu3 = st.columns([1,2,1])
 with colu2:
     st.title("2024 Presidential Election Data")
+
 # Top Main Line
 st.subheader("Favorability Tracking",
              help="Data supplied by FiveThirtyEight.com favorability and approval polls.  Click on a candidate's name to toggle them on or off from the view.")
 
+# Add favorability chart
 if st.session_state.favorability_chart:
-    col11, col22, col33, col44 = st.columns([1,1,1,3])
+    col11, col22, col33, col44, col55 = st.columns([1,1,1,3,2])
 
     with col11:
         st.button(label="Favorability",
@@ -823,11 +873,17 @@ if st.session_state.favorability_chart:
                 use_container_width=True,
                 type="primary" if st.session_state.favor_type=="Approval" else "secondary",
                 on_click=set_favtype_approval)
+    with col55:
+        st.selectbox("Timeline",
+                     options=timeline_options,
+                     key="favor_time",
+                     on_change=set_poll_timeline)
         
     st.plotly_chart(st.session_state.favorability_chart,
                     use_container_width=True,
                     key="favor_chart")
 
+# Add the map
 st.write("")
 st.subheader("United States Election Polling Map",
          help="Data supplied by FiveThirtyEight.com aggregate presidential polls.")
@@ -931,5 +987,3 @@ if st.session_state.run_initial:
     update_button_press()
     st.session_state.run_initial = False
     st.rerun()
-
-#### Leave Off Point:  Everything is working good that's been built.  Need to add Approval functionality, as well as candidate choosing and date ranging.

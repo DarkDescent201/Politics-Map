@@ -67,9 +67,7 @@ def build_plot_fav(data=pd.DataFrame, poll_date:datetime.date="common", favorabi
         earliest_common_date = earliest_dates.max()
         full_df = full_df[full_df['date'] >= earliest_common_date]
     else:
-        full_df = full_df[full_df['date'] >= poll_date]
-
-    ##### Leave off point:  Figuring out the artifacts, it's due to Trump missing 2 dates and thus having mismatched arrays.  Either filter differently or find a way to fill in the missing data with something.
+        full_df = full_df[full_df['date'] >= str(poll_date)]
 
     # Acquire unique candidate list and sort by Favorability type
     candidate_list = full_df['politician'].unique()
@@ -87,7 +85,7 @@ def build_plot_fav(data=pd.DataFrame, poll_date:datetime.date="common", favorabi
                            connectgaps = True,
                            name = candidate,
                            line = dict(color = candidate_color,
-                                       width = 2))
+                                       width = 3))
         
         fig.add_trace(trace)
 
@@ -114,12 +112,22 @@ def build_plot_fav(data=pd.DataFrame, poll_date:datetime.date="common", favorabi
     
     return fig
 
-def build_plot_app(data:pd.DataFrame):
+def build_plot_app(data:pd.DataFrame, poll_date:datetime.date="common"):
     # Validate inputs
     try:
         full_df = pd.DataFrame(data)
     except Exception as e:
         print("\n", f"Error Report:    {e}", "\n")
+
+    # Deal with the dates
+    copy_df = full_df.copy()
+
+    if poll_date == "common":
+        earliest_dates = copy_df.groupby('politician')['end_date'].min()
+        earliest_common_date = earliest_dates.max()
+        full_df = full_df[full_df['end_date'] >= earliest_common_date]
+    else:
+        full_df = full_df[full_df['end_date'] >= str(poll_date)]
 
     # Initialize chart
     fig = go.Figure()
@@ -132,7 +140,7 @@ def build_plot_app(data:pd.DataFrame):
                         connectgaps = True,
                         name = "Approve",
                         line = dict(color = 'cyan',
-                                    width = 2))
+                                    width = 3))
     
     trace2 = go.Scatter(x = full_df['end_date'],
                         y = full_df['disapprove_estimate'],
@@ -141,7 +149,7 @@ def build_plot_app(data:pd.DataFrame):
                         connectgaps = True,
                         name = "Disapprove",
                         line = dict(color = 'magenta',
-                                    width = 2))
+                                    width = 3))
     
     fig.add_trace(trace2); fig.add_trace(trace1)
 
