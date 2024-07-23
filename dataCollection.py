@@ -210,7 +210,7 @@ def get_latest_state_polls(data:pd.DataFrame) -> pd.DataFrame:
 
     return state_date_df
 
-def get_latest_candidate_polls(data:pd.DataFrame, candidate_list:list=['Donald Trump', 'Joe Biden']) -> pd.DataFrame:
+def get_latest_candidate_polls(data:pd.DataFrame, candidate_list:list=['Donald Trump', 'Kamala Harris']) -> pd.DataFrame:
     # Parse by candidate options
     candidate_df = parse_by_candidates(data)
 
@@ -281,7 +281,7 @@ def parse_by_population(data:pd.DataFrame, pop_type:str='everyone') -> pd.DataFr
 
     return population_df
 
-def parse_by_candidates(data:pd.DataFrame, candidate_selection:list=['Donald Trump', 'Joe Biden']) -> pd.DataFrame:
+def parse_by_candidates(data:pd.DataFrame, candidate_selection:list=['Donald Trump', 'Kamala Harris']) -> pd.DataFrame:
     # Validate inputs
     try:
         data = pd.DataFrame(data)
@@ -513,9 +513,9 @@ def extract_candidate_groups(data:pd.DataFrame) -> list:
     unique_candidate_list = [list(x) for x in set(tuple(x) for x in candidate_list)]
     unique_candidate_list.sort()
     unique_candidate_list.sort(key=len)
-    if ["Donald Trump", "Joe Biden"] in unique_candidate_list:
-        unique_candidate_list.remove(["Donald Trump", "Joe Biden"])
-        unique_candidate_list = [["Donald Trump", "Joe Biden"]] + unique_candidate_list
+    if ["Donald Trump", "Kamala Harris"] in unique_candidate_list:
+        unique_candidate_list.remove(["Donald Trump", "Kamala Harris"])
+        unique_candidate_list = [["Donald Trump", "Kamala Harris"]] + unique_candidate_list
 
     return unique_candidate_list
 
