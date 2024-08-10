@@ -79,9 +79,10 @@ full_candidate_list = {'Amy Klobuchar': 'DEM', 'Andrew Yang': 'OTH', 'Andy Beshe
                        'Philip Murphy': 'DEM', 'Randall A. Terry': 'CON', 'Rick Scott': 'REP', 
                        'Robert F. Kennedy': 'IND', 'Ron DeSantis': 'REP', 'Taylor Swift': 'DEM', 
                        'Ted Cruz': 'REP', 'Tim Scott': 'REP', 'Tom Cotton': 'REP', 
-                       'Vivek G. Ramaswamy': 'REP', 'Al Gore': 'DEM'} 
+                       'Vivek G. Ramaswamy': 'REP', 'Al Gore': 'DEM', 'Claudia De La Cruz': 'PSL'} 
 full_party_list = {'CON': 'white', 'DEM': 'blue', 'GRE': 'green', 'IND': 'beige', 
-                   'LIB': 'yellow', 'OTH': 'grey', 'REP': 'red', 'UNK': 'darkgray'}
+                   'LIB': 'yellow', 'OTH': 'grey', 'REP': 'red', 'UNK': 'darkgray',
+                   'PSL': 'crimson'}
 timeframe_options = ["All polling this cycle", "All of 2024", "Latest polling results",
                      "Latest state polls", "Latest matchup polls", "Last 3 days",
                      "Last 7 days", "Last 14 days", "Last 30 days",
@@ -783,6 +784,11 @@ def initial_data_load():
         cand_party = preliminary_data.loc[preliminary_data['candidate_name'] == ind_candidate, "party"].values[0]
         full_candidate_list[ind_candidate] = cand_party
 
+        if cand_party not in full_party_list.keys():
+            full_party_list[cand_party] = 'lightgreen'
+        else:
+            pass
+
     return preliminary_data, preliminary_candidates, preliminary_pollsters
 
 
@@ -846,7 +852,7 @@ with colu2:
 
 # Top Main Line
 st.subheader("Favorability Tracking",
-             help="Data supplied by FiveThirtyEight.com favorability and approval polls.  Click on a candidate's name to toggle them on or off from the view.")
+             help="Data supplied by FiveThirtyEight.com favorability and approval polls.  Click on a candidate's name to toggle them on or off from the view.  Approval Rating always refers to the current administration.")
 
 # Add favorability chart
 if st.session_state.favorability_chart:

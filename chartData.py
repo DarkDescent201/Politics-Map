@@ -12,7 +12,7 @@ URL_APP = "https://projects.fivethirtyeight.com/biden-approval-data/approval_top
 string_columns = ["politician", "subpopulation", "answer"]
 date_columns = ["date"]
 number_columns = ["pct_estimate", "lo", "hi"]
-color_dict = {"Donald Trump": "red", "Joe Biden": "blue", "Robert F. Kennedy": "beige",
+color_dict = {"Donald Trump": "red", "Kamala Harris": "blue", "Robert F. Kennedy": "beige",
               "Approve": 'green', "Disapprove": 'orange'}
 
 
@@ -36,7 +36,7 @@ def acquire_data(show_list:list=[True,True,True], favorability_type:str="Favorab
         full_df = full_df[~full_df['date'].isin(['2023-10-07', '2023-10-08'])]
 
         # Parse for specific candidates of interest
-        prelim_list = ['Donald Trump', 'Joe Biden', 'Robert F. Kennedy']
+        prelim_list = ['Donald Trump', 'Kamala Harris', 'Robert F. Kennedy']
         candidate_list = []
 
         for i, truth in enumerate(show_list):
