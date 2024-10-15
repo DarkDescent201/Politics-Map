@@ -136,7 +136,7 @@ def set_poll_timeline():
     st.session_state.chart_timeline = new_date
 
     # Update map
-    update_button_press()
+    st.session_state.update_button_disabled = False
 
     return
 
@@ -148,7 +148,7 @@ def set_poll_quantity():
     st.session_state.poll_quantity = int(widget_val)
 
     # Update map
-    update_button_press()
+    st.session_state.update_button_disabled = False
 
     return
 
@@ -160,13 +160,13 @@ def update_color_slider():
     st.session_state.color_state = widget_val
 
     # Update map
-    update_button_press()
+    st.session_state.update_button_disabled = False
 
     return
 
 def weighting_method_change():
     if 'figure' in st.session_state:
-        update_button_press()
+        st.session_state.update_button_disabled = False
 
     return
 
@@ -190,7 +190,7 @@ def set_favtype_favorable():
     st.session_state.favor_type = "Favorable"
 
     if st.session_state.button_text == "Update Map":
-        update_button_press()
+        get_favorability_chart()
 
     return
 
@@ -198,7 +198,7 @@ def set_favtype_unfavorable():
     st.session_state.favor_type = "Unfavorable"
 
     if st.session_state.button_text == "Update Map":
-        update_button_press()
+        get_favorability_chart()
 
     return
 
@@ -206,7 +206,7 @@ def set_favtype_approval():
     st.session_state.favor_type = "Approval"
 
     if st.session_state.button_text == "Update Map":
-        update_button_press()
+        get_favorability_chart()
 
     return
 
@@ -441,8 +441,7 @@ def update_button_press():
     electoral_vote_df, polled_state_list = dataCollection.calculate_electoral_votes(poll_results_df, candidate_list=candidates)
 
     get_poll_data(parsed_df)
-    get_favorability_chart([st.session_state.show_dt, st.session_state.show_jb, st.session_state.show_rfk],
-                           st.session_state.chart_timeline)
+    get_favorability_chart()
     make_map(poll_results_df, electoral_vote_df, polled_state_list, timeframe)
 
     return
@@ -754,7 +753,7 @@ def get_poll_data(data:pd.DataFrame):
 
     return
 
-def get_favorability_chart(showlist:list=[True,True,True], start_date:datetime.date="common"):
+def get_favorability_chart(showlist:list=[True,True,False], start_date:datetime.date="common"):
     display_date = start_date
     favorability_type = st.session_state.favor_type
 
