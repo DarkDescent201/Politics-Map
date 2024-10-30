@@ -100,6 +100,42 @@ timeline_options = ["Earliest Common Date", "Entire Election Cycle", "Last 30 Da
 
 
 #### Define Functions ####
+def update_candidate_tilt():
+    #Get values from widget
+    widget_val = st.session_state["candidate_tilt"]
+
+    #Set numerical values based on selection
+    if widget_val == "Harris +5":
+        xval = -5
+    elif widget_val == "Harris +4":
+        xval = -4
+    elif widget_val == "Harris +3":
+        xval = -3
+    elif widget_val == "Harris +2":
+        xval = -2
+    elif widget_val == "Harris +1":
+        xval = -1
+    elif widget_val == "Trump +1":
+        xval = 1
+    elif widget_val == "Trump +2":
+        xval = 2
+    elif widget_val == "Trump +3":
+        xval = 3
+    elif widget_val == "Trump +4":
+        xval = 4
+    elif widget_val == "Trump +5":
+        xval = 5
+    else:
+        xval = 0
+
+    #Set session variable
+    st.session_state.candidate_margin = xval
+
+    # Update map
+    st.session_state.update_button_disabled = False
+
+    return
+
 def set_poll_timeline():
     # Get values from widget
     widget_val = st.session_state["favor_time"]
@@ -437,7 +473,8 @@ def update_button_press():
     parsed_df = dataCollection.parse_by_candidates(population_df, candidate_selection=candidates)
 
     # Use parsed data to get calculations
-    poll_results_df = dataCollection.data_processing(parsed_df, candidate_list=candidates, weight_type=weight)
+    poll_results_df = dataCollection.data_processing(parsed_df, candidate_list=candidates, weight_type=weight,
+                                                     margin_tilt=st.session_state.candidate_margin)
     electoral_vote_df, polled_state_list = dataCollection.calculate_electoral_votes(poll_results_df, candidate_list=candidates)
 
     get_poll_data(parsed_df)
@@ -841,6 +878,10 @@ if 'favor_type' not in st.session_state:
     st.session_state['favor_type'] = "Approval"
 if 'chart_timeline' not in st.session_state:
     st.session_state['chart_timeline'] = 'common'
+if 'candidate_tilt' not in st.session_state:
+    st.session_state['candidate_tilt'] = "EVEN"
+if 'candidate_margin' not in st.session_state:
+    st.session_state['candidate_margin'] = 0
 
 
 #### Page Layout ####
@@ -924,6 +965,10 @@ st.sidebar.selectbox("Method Selection",
 
 st.sidebar.header("Filter Options")
 
+st.sidebar.selectbox("Candidate Matchups",
+                     options=st.session_state.candidate_options,
+                     key="matchup_selectbox",
+                     on_change=update_widget_display)
 st.sidebar.selectbox("Timeframe", 
                      options=st.session_state.timeframe_options,
                      key="timeframe_selectbox",
@@ -933,37 +978,43 @@ st.sidebar.multiselect("Pollsters",
                        key="pollster_selectbox",
                        help="Leaving this blank includes all pollsters.",
                        on_change=update_widget_display)
-st.sidebar.slider("Pollster Rating",
-                  min_value=0.1,
-                  max_value=3.0,
-                  value=(0.1, 3.0),
-                  step=0.1,
-                  key="rating_slider",
-                  on_change=update_widget_display)
 st.sidebar.selectbox("Polling Population",
                      options=st.session_state.population_options,
                      key="population_selectbox",
                      help="For technical reasons, 'everyone' and 'all respondents' are not the same.  'Everyone' is broader.",
                      on_change=update_widget_display)
 
-st.sidebar.selectbox("Candidate Matchups",
-                     options=st.session_state.candidate_options,
-                     key="matchup_selectbox",
-                     on_change=update_widget_display)
+st.sidebar.slider("Pollster Rating",
+                  min_value=0.1,
+                  max_value=3.0,
+                  value=(0.1, 3.0),
+                  step=0.1,
+                  key="rating_slider",
+                  help="538 grades their pollsters on a 0.1 to 3.0 scale, with a higher score being better.  Use this slider to select only the grading range that you desire to see polls for.  Any polls outside the range will be omitted entirely.",
+                  on_change=update_widget_display)
 
-st.sidebar.button(label=st.session_state.button_text,
-                  key="update_button",
-                  type="primary",
-                  disabled=st.session_state.update_button_disabled,
-                  on_click=update_button_press)
+st.sidebar.select_slider("Candidate Tilt",
+                 options=["Harris +5", "Harris +4", "Harris +3",
+                          "Harris +2", "Harris +1", "EVEN",
+                          "Trump +1", "Trump +2", "Trump +3",
+                          "Trump +4", "Trump +5"],
+                          value=st.session_state.candidate_tilt,
+                          key="candidate_tilt",
+                          help="Use this slider to account for any suspected polling error.  Whatever margin you select will adjust the average by adding to the selected candidate and subtracting from the other.  For example, 'Harris +2' will add 2 points to Harris and subtract 2 from Trump.",
+                          on_change=update_candidate_tilt)
 
-st.sidebar.header("")
 st.sidebar.select_slider("Color Map By...",
                          options=["Lead Margin", "Widest Margin", "Vote %"],
                          value=st.session_state.color_state,
                          key="color_selector",
                          help="The lead margin is the difference between the leader and second place.  The widest margin is the difference between the leader and last place.  If there are only two candidates, the margins will be the same.  (When set to widest margin, the value in the hover text will change)",
                          on_change=update_color_slider)
+
+st.sidebar.button(label=st.session_state.button_text,
+                  key="update_button",
+                  type="primary",
+                  disabled=st.session_state.update_button_disabled,
+                  on_click=update_button_press)
 
 st.write("")
 co1, co2, c03 = st.columns([2,1,2])
@@ -977,7 +1028,7 @@ if st.session_state.poll_text and st.session_state.poll_header:
                         options=quantity_options,
                         on_change=set_poll_quantity,
                         key="quantity_selector")
-    c_list = st.columns([2,2,5,2,2,2])
+    c_list = st.columns([2,2,4,2,2,2])
     for i, c in enumerate(c_list):
         with c:
             st.subheader(st.session_state.poll_header[i])

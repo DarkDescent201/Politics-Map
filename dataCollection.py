@@ -335,7 +335,7 @@ def sort_polls_into_questions(data:dict={}) -> dict: # Must be sorted into polls
 
     return poll_question_dict
 
-def data_processing(data:pd.DataFrame, candidate_list:list, weight_type:str="unweighted average") -> pd.DataFrame:
+def data_processing(data:pd.DataFrame, candidate_list:list, weight_type:str="unweighted average", margin_tilt:int=0) -> pd.DataFrame:
     # Defining terms
     weighting_methods = ["unweighted average", "pollster grade", "sample size", "recency"]
     if weight_type in weighting_methods:
@@ -400,16 +400,39 @@ def data_processing(data:pd.DataFrame, candidate_list:list, weight_type:str="unw
         for candidate in candidate_list:
             current_score = question_data.loc[question_data["candidate_name"]==candidate, "pct"].values[0]
             if weight_type == "pollster grade":
+                if candidate == "Kamala Harris":
+                    current_score = current_score - margin_tilt
+                elif candidate == "Donald Trump":
+                    current_score = current_score + margin_tilt
+                else:
+                    pass
                 current_score = current_score * numeric_grade
                 current_score = round(current_score, 1)
             elif weight_type == "sample size":
+                if candidate == "Kamala Harris":
+                    current_score = current_score - margin_tilt
+                elif candidate == "Donald Trump":
+                    current_score = current_score + margin_tilt
+                else:
+                    pass
                 current_score = current_score * sample_size
                 current_score = round(current_score, 1)
             elif weight_type == "recency":
+                if candidate == "Kamala Harris":
+                    current_score = current_score - margin_tilt
+                elif candidate == "Donald Trump":
+                    current_score = current_score + margin_tilt
+                else:
+                    pass
                 current_score = current_score * recency_score
                 current_score = round(current_score, 1)
             else:
-                pass
+                if candidate == "Kamala Harris":
+                    current_score = current_score - margin_tilt
+                elif candidate == "Donald Trump":
+                    current_score = current_score + margin_tilt
+                else:
+                    pass
             
             candidate_scores[state_polled][candidate] = current_score
             candidate_scores[state_polled]["denominator"] = denominator
@@ -556,6 +579,7 @@ def extract_population_types(data:pd.DataFrame) -> list:
     # 3b) if using Latest Candidate Polls, don't need to parse by candidates again
     # 4) Process the data; candidate list and DF will be provided from candidate parse
 if __name__ == '__main__':
+    """
     df1 = acquire_latest_data()
     df2 = parse_data_by_date(df1, 90)
     df3 = get_latest_state_polls(df1)
@@ -563,3 +587,4 @@ if __name__ == '__main__':
     print('\n', df1, df2, df3, df4, '\n', sep='\n\n')
     df5 = extract_candidate_groups(df2)
     print('\n', df5, '\n')
+    """
