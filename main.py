@@ -956,13 +956,6 @@ if st.session_state.figure:
                     key="map_figure")
     
 # Sidebar options
-
-st.sidebar.header("Weighting Method")
-st.sidebar.selectbox("Method Selection",
-                     options=st.session_state.weighting_options,
-                     key="weighting_selectbox",
-                     on_change=weighting_method_change)
-
 st.sidebar.header("Filter Options")
 
 st.sidebar.selectbox("Candidate Matchups",
@@ -1009,6 +1002,12 @@ st.sidebar.select_slider("Color Map By...",
                          key="color_selector",
                          help="The lead margin is the difference between the leader and second place.  The widest margin is the difference between the leader and last place.  If there are only two candidates, the margins will be the same.  (When set to widest margin, the value in the hover text will change)",
                          on_change=update_color_slider)
+
+st.sidebar.header("Weighting Method")
+st.sidebar.selectbox("Method Selection",
+                     options=st.session_state.weighting_options,
+                     key="weighting_selectbox",
+                     on_change=weighting_method_change)
 
 st.sidebar.button(label=st.session_state.button_text,
                   key="update_button",
