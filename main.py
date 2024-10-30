@@ -986,6 +986,12 @@ st.sidebar.slider("Pollster Rating",
                   help="538 grades their pollsters on a 0.1 to 3.0 scale, with a higher score being better.  Use this slider to select only the grading range that you desire to see polls for.  Any polls outside the range will be omitted entirely.",
                   on_change=update_widget_display)
 
+st.sidebar.header("Weighting Method")
+st.sidebar.selectbox("Method Selection",
+                     options=st.session_state.weighting_options,
+                     key="weighting_selectbox",
+                     on_change=weighting_method_change)
+
 st.sidebar.select_slider("Candidate Tilt",
                  options=["Harris +5", "Harris +4", "Harris +3",
                           "Harris +2", "Harris +1", "EVEN",
@@ -1002,12 +1008,6 @@ st.sidebar.select_slider("Color Map By...",
                          key="color_selector",
                          help="The lead margin is the difference between the leader and second place.  The widest margin is the difference between the leader and last place.  If there are only two candidates, the margins will be the same.  (When set to widest margin, the value in the hover text will change)",
                          on_change=update_color_slider)
-
-st.sidebar.header("Weighting Method")
-st.sidebar.selectbox("Method Selection",
-                     options=st.session_state.weighting_options,
-                     key="weighting_selectbox",
-                     on_change=weighting_method_change)
 
 st.sidebar.button(label=st.session_state.button_text,
                   key="update_button",
